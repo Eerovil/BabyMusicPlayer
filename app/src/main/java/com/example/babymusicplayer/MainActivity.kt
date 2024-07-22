@@ -143,6 +143,19 @@ class MainActivity : AppCompatActivity() {
         mediaPlayer?.start()
 
         songAdapter.setCurrentlyPlayingPosition(position)
+
+        // Clear on completion listener
+        mediaPlayer?.setOnCompletionListener(null)
+        // When the song finishes, play the next song
+        if (position < songsList.size - 1) {
+            mediaPlayer?.setOnCompletionListener {
+                playSong(position + 1)
+            }
+        }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        mediaPlayer?.release()
+    }
 }
