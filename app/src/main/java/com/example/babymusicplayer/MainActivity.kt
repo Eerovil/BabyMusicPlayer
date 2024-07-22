@@ -20,6 +20,7 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.bumptech.glide.Glide
 
 class MainActivity : AppCompatActivity() {
@@ -27,6 +28,8 @@ class MainActivity : AppCompatActivity() {
 
     private val REQUEST_PERMISSION = 1
     private lateinit var songGridView: GridView
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
+
     private val songsList = mutableListOf<Song>()
     private var mediaPlayer: MediaPlayer? = null
 
@@ -38,20 +41,12 @@ class MainActivity : AppCompatActivity() {
 
         songGridView = findViewById(R.id.songGridView)
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO)
-            != PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "no permission")
-            // If api level is 33 or higher, use this
-            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.TIRAMISU) {
-                requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_PERMISSION)
-            } else {
-                ActivityCompat.requestPermissions(this,
-                    arrayOf(Manifest.permission.READ_MEDIA_AUDIO), REQUEST_PERMISSION)
-            }
-        } else {
+        swipeRefreshLayout = findViewById(R.id.swipe_refresh_layout)
+
+        swipeRefreshLayout.setOnRefreshListener {
             loadSongs()
         }
-
+        loadSongs()
         songGridView.setOnItemClickListener { _, _, position, _ ->
             playSong(position)
         }
@@ -73,6 +68,7 @@ class MainActivity : AppCompatActivity() {
 
         val metadataBySongId = mutableMapOf<Long, SongMetadata>()
 
+        songsList.clear()
         cursor?.use { it ->
             while (it.moveToNext()) {
                 val id = it.getLong(it.getColumnIndex(MediaStore.Audio.Media._ID))
@@ -105,6 +101,7 @@ class MainActivity : AppCompatActivity() {
 
         val songAdapter = SongAdapter(this, songsList)
         songGridView.adapter = songAdapter
+        swipeRefreshLayout.isRefreshing = false
     }
 
     fun albumArtExists(context: Context, uri: Uri): Boolean {
@@ -148,15 +145,4 @@ class MainActivity : AppCompatActivity() {
         songAdapter.setCurrentlyPlayingPosition(position)
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_PERMISSION) {
-            if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                loadSongs()
-            } else {
-                Log.d(TAG, "Permission denied" + grantResults[0])
-                Toast.makeText(this, "Permission denied" + grantResults[0], Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
 }
