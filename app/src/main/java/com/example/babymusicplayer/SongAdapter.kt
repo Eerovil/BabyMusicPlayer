@@ -25,6 +25,10 @@ class SongAdapter(private val context: Context, private val songs: List<Song>) :
         notifyDataSetChanged() // Refresh the list to update the background
     }
 
+    fun getCurrentlyPlayingPosition(): Int {
+        return currentlyPlayingPosition
+    }
+
     override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
         val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.song_item, parent, false)
         val songTitle: TextView = view.findViewById(R.id.songTitle)

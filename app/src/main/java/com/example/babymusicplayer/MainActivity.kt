@@ -97,13 +97,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun playSong(position: Int) {
+        // Find currently playing song
+        val songAdapter = songGridView.adapter as SongAdapter
+        val currentlyPlayingPosition = songAdapter.getCurrentlyPlayingPosition()
+        // If the new song is the same as the currently playing song, stop
         mediaPlayer?.release()
+
+        if (currentlyPlayingPosition == position) {
+            songAdapter.setCurrentlyPlayingPosition(-1)
+            return
+        }
         val song = songsList[position]
         val songUri: Uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)
         mediaPlayer = MediaPlayer.create(this, songUri)
         mediaPlayer?.start()
 
-        val songAdapter = songGridView.adapter as SongAdapter
         songAdapter.setCurrentlyPlayingPosition(position)
     }
 
