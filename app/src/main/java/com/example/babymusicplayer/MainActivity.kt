@@ -9,12 +9,14 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.GridView
 import android.widget.ImageView
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -39,8 +41,13 @@ class MainActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO)
             != PackageManager.PERMISSION_GRANTED) {
             Log.d(TAG, "no permission")
-            ActivityCompat.requestPermissions(this,
-                arrayOf(Manifest.permission.READ_MEDIA_AUDIO), REQUEST_PERMISSION)
+            // If api level is 33 or higher, use this
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.TIRAMISU) {
+                requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_PERMISSION)
+            } else {
+                ActivityCompat.requestPermissions(this,
+                    arrayOf(Manifest.permission.READ_MEDIA_AUDIO), REQUEST_PERMISSION)
+            }
         } else {
             loadSongs()
         }
