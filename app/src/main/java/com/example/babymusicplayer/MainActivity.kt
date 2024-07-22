@@ -63,35 +63,44 @@ class MainActivity : AppCompatActivity() {
         val projection = arrayOf(
             MediaStore.Audio.Media._ID,
             MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.ALBUM_ID
+            MediaStore.Audio.Media.ALBUM_ID,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.ALBUM
         )
         val cursor: Cursor? = contentResolver.query(uri, projection, null, null, null)
 
-        data class SongMetadata(val title: String, val albumId: Long, val artistId: Long)
+        data class SongMetadata(val title: String, val albumTitle: String, val artistName: String)
 
         val metadataBySongId = mutableMapOf<Long, SongMetadata>()
 
-        cursor?.use {
+        cursor?.use { it ->
             while (it.moveToNext()) {
                 val id = it.getLong(it.getColumnIndex(MediaStore.Audio.Media._ID))
                 val title = it.getString(it.getColumnIndex(MediaStore.Audio.Media.TITLE))
                 val albumId = it.getLong(it.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID))
-                var artistID: Long = 0
+                var artistName = ""
                 try {
-                    artistID = it.getLong(it.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST_ID))
-                } catch (e: IllegalArgumentException) {
-                    Log.d(TAG, "No artist ID found for song: $title")
-
+                    artistName = it.getString(it.getColumnIndex(MediaStore.Audio.Media.ARTIST))
+                    Log.d(TAG, "Artist name: $artistName")
+                } catch (e: Exception) {
+                    Log.d(TAG, "Error getting artist name")
+                }
+                var albumName = ""
+                try {
+                    albumName = it.getString(it.getColumnIndex(MediaStore.Audio.Media.ALBUM))
+                    Log.d(TAG, "Album name: $albumName")
+                } catch (e: Exception) {
+                    Log.d(TAG, "Error getting album name")
                 }
                 val albumArtUri = getAlbumArtUri(albumId)
-                metadataBySongId[id] = SongMetadata(title, albumId, artistID)
+                metadataBySongId[id] = SongMetadata(title, albumName, artistName)
                 songsList.add(Song(id, title, albumArtUri))
             }
         }
 
         // Sort the songs by artist, album, title
-        songsList.sortWith(compareBy({ metadataBySongId[it.id]?.artistId ?: Long.MAX_VALUE },
-            { metadataBySongId[it.id]?.albumId ?: Long.MAX_VALUE },
+        songsList.sortWith(compareBy({ metadataBySongId[it.id]?.artistName ?: "" },
+            { metadataBySongId[it.id]?.albumTitle ?: "" },
             { metadataBySongId[it.id]?.title ?: "" }))
 
         val songAdapter = SongAdapter(this, songsList)
