@@ -67,15 +67,32 @@ class MainActivity : AppCompatActivity() {
         )
         val cursor: Cursor? = contentResolver.query(uri, projection, null, null, null)
 
+        data class SongMetadata(val title: String, val albumId: Long, val artistId: Long)
+
+        val metadataBySongId = mutableMapOf<Long, SongMetadata>()
+
         cursor?.use {
             while (it.moveToNext()) {
                 val id = it.getLong(it.getColumnIndex(MediaStore.Audio.Media._ID))
                 val title = it.getString(it.getColumnIndex(MediaStore.Audio.Media.TITLE))
                 val albumId = it.getLong(it.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID))
+                var artistID: Long = 0
+                try {
+                    artistID = it.getLong(it.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST_ID))
+                } catch (e: IllegalArgumentException) {
+                    Log.d(TAG, "No artist ID found for song: $title")
+
+                }
                 val albumArtUri = getAlbumArtUri(albumId)
+                metadataBySongId[id] = SongMetadata(title, albumId, artistID)
                 songsList.add(Song(id, title, albumArtUri))
             }
         }
+
+        // Sort the songs by artist, album, title
+        songsList.sortWith(compareBy({ metadataBySongId[it.id]?.artistId ?: Long.MAX_VALUE },
+            { metadataBySongId[it.id]?.albumId ?: Long.MAX_VALUE },
+            { metadataBySongId[it.id]?.title ?: "" }))
 
         val songAdapter = SongAdapter(this, songsList)
         songGridView.adapter = songAdapter
