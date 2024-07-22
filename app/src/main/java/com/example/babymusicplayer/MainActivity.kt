@@ -1,7 +1,10 @@
 package com.example.babymusicplayer
 
+import SongAdapter
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.ContentUris
+import android.content.Context
 import android.content.pm.PackageManager
 import android.database.Cursor
 import android.media.MediaPlayer
@@ -10,13 +13,12 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.GridView
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.babymusicplayer.R
-import com.example.babymusicplayer.Song
-import com.example.babymusicplayer.SongAdapter
+import com.bumptech.glide.Glide
 
 class MainActivity : AppCompatActivity() {
     private val TAG: String = "MyActivity"
@@ -48,26 +50,50 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("Range")
     private fun loadSongs() {
         val uri: Uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-        val projection = arrayOf(MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE)
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ALBUM_ID
+        )
         val cursor: Cursor? = contentResolver.query(uri, projection, null, null, null)
-
-        // Log to logcat
-        Log.d(TAG, "loadSongs");
 
         cursor?.use {
             while (it.moveToNext()) {
                 val id = it.getLong(it.getColumnIndex(MediaStore.Audio.Media._ID))
                 val title = it.getString(it.getColumnIndex(MediaStore.Audio.Media.TITLE))
-                songsList.add(Song(id, title))
+                val albumId = it.getLong(it.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID))
+                val albumArtUri = getAlbumArtUri(albumId)
+                songsList.add(Song(id, title, albumArtUri))
             }
         }
 
-        Log.d(TAG, "SongList: " + songsList);
-
         val songAdapter = SongAdapter(this, songsList)
         songGridView.adapter = songAdapter
+    }
+
+    fun albumArtExists(context: Context, uri: Uri): Boolean {
+        return try {
+            context.contentResolver.openInputStream(uri)?.close()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+    fun getAlbumArtUri(albumID: Long): Uri? {
+        val sArt = Uri.parse("content://media/external/audio/albumart")
+        val uri = ContentUris.withAppendedId(sArt, albumID)
+
+        if (!albumArtExists(this, uri)) {
+            Log.d(TAG, "Album art does not exist for album ID: $albumID")
+            return null
+        }
+
+        Log.d(TAG, "Album art uri: $uri")
+        return uri
+
     }
 
     private fun playSong(position: Int) {
@@ -77,7 +103,8 @@ class MainActivity : AppCompatActivity() {
         mediaPlayer = MediaPlayer.create(this, songUri)
         mediaPlayer?.start()
 
-        Toast.makeText(this, "Playing: ${song.title}", Toast.LENGTH_SHORT).show()
+        val songAdapter = songGridView.adapter as SongAdapter
+        songAdapter.setCurrentlyPlayingPosition(position)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
